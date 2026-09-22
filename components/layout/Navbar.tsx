@@ -1,22 +1,16 @@
 "use client";
 
 import React, { useState } from "react";
-import { FolderKanban, Menu, Plus, RotateCcw, Sparkles } from "lucide-react";
+import { FolderKanban, Menu, Sparkles } from "lucide-react";
 
-import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { UserProfileMenu } from "@/features/auth/components/UserProfileMenu";
-import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
-interface NavbarProps {
-  onOpenCreateTask?: () => void;
-}
-
-export function Navbar({ onOpenCreateTask }: NavbarProps) {
+export function Navbar() {
   const { isMobileNavOpen, setIsMobileNavOpen, resetToSampleData } =
     useWorkspace();
-  const { canCreateTask } = usePermissions();
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
   return (
@@ -50,35 +44,10 @@ export function Navbar({ onOpenCreateTask }: NavbarProps) {
         </div>
 
         <div className="flex items-center gap-2.5 sm:gap-3">
-          {/* Quick Reset Button */}
-          {/* <button
-            type="button"
-            onClick={() => setIsResetDialogOpen(true)}
-            title="Reset workspace demo data"
-            className="hidden sm:flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 cursor-pointer"
-          >
-            <RotateCcw className="h-4 w-4" />
-          </button> */}
+          {/* Dark Mode & Light Mode Toggle Switch */}
+          <ThemeToggle />
 
-          {/* New Task Button */}
-          {onOpenCreateTask && (
-            <Button
-              size="sm"
-              onClick={onOpenCreateTask}
-              disabled={!canCreateTask}
-              className="gap-1.5 font-medium shadow-sm shadow-indigo-600/20"
-              title={
-                canCreateTask
-                  ? "Create a new task"
-                  : "Viewers cannot create tasks"
-              }
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">New Task</span>
-            </Button>
-          )}
-
-          {/* User Profile Menu & Logout */} 
+          {/* User Profile Menu & Logout */}
           <div className="pl-1 sm:pl-2 border-l border-slate-200 dark:border-slate-800">
             <UserProfileMenu />
           </div>

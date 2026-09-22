@@ -24,7 +24,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${jakartaSans.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${jakartaSans.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const stored = localStorage.getItem('flowdesk-theme');
+                if (stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
       <body className="flex flex-col min-h-screen w-full bg-slate-50 text-slate-900 dark:bg-[#090d16] dark:text-slate-100 selection:bg-indigo-500/20 selection:text-indigo-600 font-sans">
         <WorkspaceProvider>
           <Toaster

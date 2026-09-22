@@ -15,7 +15,7 @@ export function useStatuses() {
   } = useWorkspace();
 
   const sortedStatuses = useMemo(() => {
-    return [...statuses].sort((a, b) => a.order - b.order);
+    return [...statuses].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   }, [statuses]);
 
   const statusTaskCounts = useMemo(() => {

@@ -4,6 +4,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -12,7 +13,7 @@ import toast from "react-hot-toast";
 import { hasPermission } from "@/features/auth/utils/permissions";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
-  DEMO_PERSONAS,
+  DEMO_USERS,
   INITIAL_ACTIVITIES,
   INITIAL_COMMENTS,
   INITIAL_MEMBERS,
@@ -39,7 +40,7 @@ interface WorkspaceContextType {
   activeRole: Role;
   login: (user: User) => void;
   logout: () => void;
-  switchPersona: (role: Role) => void;
+  switchUser: (role: Role) => void;
 
   // Workspace State
   tasks: Task[];
@@ -102,7 +103,7 @@ const WorkspaceContext = createContext<WorkspaceContextType | undefined>(
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   // Session User
   const [currentUser, setCurrentUser, userHydrated] =
-    useLocalStorage<User | null>("flowdesk_auth_user_v2", DEMO_PERSONAS[0]);
+    useLocalStorage<User | null>("flowdesk_auth_user_v2", DEMO_USERS[0]);
 
   // Tasks, Statuses, Members, Activities, Comments
   const [tasks, setTasks, tasksHydrated] = useLocalStorage<Task[]>(
@@ -143,9 +144,35 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(
     (user: User) => {
       setCurrentUser(user);
+      setMembers((prevMembers) => {
+        const existingIndex = prevMembers.findIndex(
+          (m) =>
+            m.id === user.id ||
+            m.email.toLowerCase() === user.email.toLowerCase()
+        );
+        if (existingIndex >= 0) {
+          const updated = [...prevMembers];
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            name: user.name,
+            role: user.role,
+            email: user.email,
+          };
+          return updated;
+        } else {
+          const newMember: Member = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            createdAt: new Date().toISOString(),
+          };
+          return [...prevMembers, newMember];
+        }
+      });
       toast.success(`Logged in as ${user.name} (${user.role.toUpperCase()})`);
     },
-    [setCurrentUser]
+    [setCurrentUser, setMembers]
   );
 
   const logout = useCallback(() => {
@@ -153,17 +180,37 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     toast.success("Logged out successfully");
   }, [setCurrentUser]);
 
-  const switchPersona = useCallback(
+  const switchUser = useCallback(
     (role: Role) => {
-      const targetPersona =
-        DEMO_PERSONAS.find((p) => p.role === role) || DEMO_PERSONAS[0];
-      setCurrentUser(targetPersona);
-      toast.success(
-        `Switched account to ${targetPersona.name} (${role.toUpperCase()})`
-      );
+      const targetUser =
+        DEMO_USERS.find((p) => p.role === role) || DEMO_USERS[0];
+      login(targetUser);
     },
-    [setCurrentUser]
+    [login]
   );
+
+  useEffect(() => {
+    if (isHydrated && currentUser) {
+      setMembers((prevMembers) => {
+        const existingIndex = prevMembers.findIndex(
+          (m) =>
+            m.id === currentUser.id ||
+            m.email.toLowerCase() === currentUser.email.toLowerCase()
+        );
+        if (existingIndex < 0) {
+          const newMember: Member = {
+            id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email,
+            role: currentUser.role,
+            createdAt: new Date().toISOString(),
+          };
+          return [...prevMembers, newMember];
+        }
+        return prevMembers;
+      });
+    }
+  }, [isHydrated, currentUser, setMembers]);
 
   const logActivity = useCallback(
     (taskId: string, action: Activity["action"], description: string): void => {
@@ -308,18 +355,20 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      const newStatus: Status = {
-        id: `status-${generateId()}`,
-        name: data.name.trim(),
-        color: data.color,
-        order: statuses.length,
-      };
+      setStatuses((prev) => {
+        const newStatus: Status = {
+          id: `status-${generateId()}`,
+          name: data.name.trim(),
+          color: data.color,
+          order: prev.length,
+        };
+        return [...prev, newStatus];
+      });
 
-      setStatuses((prev) => [...prev, newStatus]);
-      toast.success(`Status "${newStatus.name}" created!`);
+      toast.success(`Status "${data.name.trim()}" created!`);
       return true;
     },
-    [activeRole, statuses.length, setStatuses]
+    [activeRole, setStatuses]
   );
 
   const updateStatus = useCallback(
@@ -424,8 +473,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      const member = members.find((m) => m.id === memberId);
-      if (member?.role === "admin" && newRole !== "admin") {
+      const targetMember = members.find((m) => m.id === memberId);
+      if (targetMember?.role === "admin" && newRole !== "admin") {
         const adminCount = members.filter((m) => m.role === "admin").length;
         if (adminCount <= 1) {
           toast.error("Cannot demote the only workspace Admin.");
@@ -436,10 +485,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setMembers((prev) =>
         prev.map((m) => (m.id === memberId ? { ...m, role: newRole } : m))
       );
+
+      if (
+        currentUser &&
+        (currentUser.id === memberId ||
+          (targetMember &&
+            currentUser.email.toLowerCase() ===
+              targetMember.email.toLowerCase()))
+      ) {
+        setCurrentUser((prev) => (prev ? { ...prev, role: newRole } : prev));
+      }
+
       toast.success("Member role updated");
       return true;
     },
-    [activeRole, members, setMembers]
+    [activeRole, members, setMembers, currentUser, setCurrentUser]
   );
 
   const removeMember = useCallback(
@@ -449,13 +509,24 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      const member = members.find((m) => m.id === memberId);
-      if (member?.role === "admin") {
+      const targetMember = members.find((m) => m.id === memberId);
+      if (targetMember?.role === "admin") {
         const adminCount = members.filter((m) => m.role === "admin").length;
         if (adminCount <= 1) {
           toast.error("Cannot remove the last Admin in the workspace.");
           return false;
         }
+      }
+
+      if (
+        currentUser &&
+        (currentUser.id === memberId ||
+          (targetMember &&
+            currentUser.email.toLowerCase() ===
+              targetMember.email.toLowerCase()))
+      ) {
+        toast.error("Cannot remove your active account while logged in.");
+        return false;
       }
 
       setTasks((prev) =>
@@ -468,7 +539,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       toast.success("Member removed and unassigned from tasks.");
       return true;
     },
-    [activeRole, members, setTasks, setMembers]
+    [activeRole, members, setTasks, setMembers, currentUser]
   );
 
   // Subtask & Comment Mutations
@@ -610,7 +681,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setMembers(INITIAL_MEMBERS);
     setActivities(INITIAL_ACTIVITIES);
     setComments(INITIAL_COMMENTS);
-    setCurrentUser(DEMO_PERSONAS[0]);
+    setCurrentUser(DEMO_USERS[0]);
     toast.success("Workspace reset to demo sample data!");
   }, [
     setTasks,
@@ -627,7 +698,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       activeRole,
       login,
       logout,
-      switchPersona,
+      switchUser,
       tasks,
       statuses,
       members,
@@ -662,7 +733,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       activeRole,
       login,
       logout,
-      switchPersona,
+      switchUser,
       tasks,
       statuses,
       members,

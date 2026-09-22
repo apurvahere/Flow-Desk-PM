@@ -1,6 +1,6 @@
 import type { Activity, Comment, Member, Status, Task, User } from "@/types";
 
-export const DEMO_PERSONAS: User[] = [
+export const DEMO_USERS: User[] = [
   {
     id: "user-admin",
     name: "Alex Rivera",

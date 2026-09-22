@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -55,13 +55,8 @@ export function TaskListView({
   const totalTasks = tasks.length;
   const totalPages = Math.max(1, Math.ceil(totalTasks / pageSize));
 
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
-
-  const startIndex = (currentPage - 1) * pageSize;
+  const effectiveCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (effectiveCurrentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalTasks);
 
   const paginatedTasks = useMemo(() => {

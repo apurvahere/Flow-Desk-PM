@@ -48,7 +48,7 @@ export function DropdownMenu({
       {isOpen && (
         <div
           className={cn(
-            "absolute z-40 mt-1.5 min-w-[160px] rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-xl dark:border-slate-800 dark:bg-slate-900 animate-in fade-in-0 zoom-in-95 duration-150",
+            "absolute z-40 mt-1.5 min-w-[160px] max-h-64 overflow-y-auto custom-scrollbar rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-xl dark:border-slate-800 dark:bg-slate-900 animate-in fade-in-0 zoom-in-95 duration-150",
             align === "right"
               ? "right-0 origin-top-right"
               : "left-0 origin-top-left",

@@ -16,8 +16,9 @@ import { useRouter } from "next/navigation";
 import * as Yup from "yup";
 
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { DEMO_PERSONAS } from "@/lib/seedData";
+import { DEMO_USERS } from "@/lib/seedData";
 import type { Role, User } from "@/types";
 
 const LoginSchema = Yup.object().shape({
@@ -27,6 +28,9 @@ const LoginSchema = Yup.object().shape({
   password: Yup.string()
     .min(4, "Password must be at least 4 characters")
     .required("Password is required"),
+  role: Yup.string()
+    .oneOf(["admin", "member", "viewer"], "Invalid user type")
+    .required("User type is required"),
 });
 
 export function LoginForm() {
@@ -38,29 +42,29 @@ export function LoginForm() {
   );
 
   const handleQuickLogin = (role: Role) => {
-    const persona =
-      DEMO_PERSONAS.find((p) => p.role === role) || DEMO_PERSONAS[0];
+    const user = DEMO_USERS.find((u) => u.role === role) || DEMO_USERS[0];
     setQuickLoggingInRole(role);
-    login(persona);
+    login(user);
     router.push("/");
   };
 
   const handleFormSubmit = (
-    values: { email: string; password: string },
+    values: { email: string; password: string; role: Role },
     { setSubmitting }: { setSubmitting: (isSubmitting: boolean) => void }
   ) => {
-    const foundPersona = DEMO_PERSONAS.find(
-      (p) => p.email.toLowerCase() === values.email.toLowerCase().trim()
+    const selectedRole = values.role;
+    const foundUser = DEMO_USERS.find(
+      (u) => u.email.toLowerCase() === values.email.toLowerCase().trim()
     );
 
-    if (foundPersona) {
-      login(foundPersona);
+    if (foundUser) {
+      login({ ...foundUser, role: selectedRole });
     } else {
       const newUser: User = {
         id: `user-${Date.now()}`,
         name: values.email.split("@")[0] || "Team Member",
         email: values.email.trim(),
-        role: "member",
+        role: selectedRole,
       };
       login(newUser);
     }
@@ -89,12 +93,48 @@ export function LoginForm() {
           initialValues={{
             email: "",
             password: "",
+            role: "admin" as Role,
           }}
           validationSchema={LoginSchema}
           onSubmit={handleFormSubmit}
         >
-          {({ errors, touched, isSubmitting }) => (
+          {({ errors, touched, isSubmitting, values, setFieldValue }) => (
             <Form className="space-y-4">
+              {/* Role Dropdown */}
+              <div>
+                <label
+                  htmlFor="role"
+                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
+                >
+                  User Type (Role)
+                </label>
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 dark:text-slate-500 z-10">
+                    <Shield className="h-4 w-4" />
+                  </div>
+                  <Select
+                    id="role"
+                    name="role"
+                    value={values.role}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                      setFieldValue("role", e.target.value as Role);
+                    }}
+                    error={touched.role ? errors.role : undefined}
+                    className="pl-10 font-medium"
+                  >
+                    <option value="admin">
+                      Admin — Full workspace management permissions
+                    </option>
+                    <option value="member">
+                      Member — Standard task & comment edit permissions
+                    </option>
+                    <option value="viewer">
+                      Viewer — Read-only workspace permissions
+                    </option>
+                  </Select>
+                </div>
+              </div>
+
               {/* Email field */}
               <div>
                 <label
@@ -186,7 +226,12 @@ export function LoginForm() {
                 isLoading={isSubmitting}
                 className="w-full mt-2 font-semibold shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/30"
               >
-                Sign In to Workspace
+                Sign In as{" "}
+                {values.role === "admin"
+                  ? "Admin"
+                  : values.role === "member"
+                    ? "Member"
+                    : "Viewer"}
                 <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             </Form>

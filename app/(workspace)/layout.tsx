@@ -33,7 +33,7 @@ export default function WorkspaceLayout({
 
       {/* Main Workspace Layout */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Navbar onOpenCreateTask={() => setIsCreateTaskOpen(true)} />
+        <Navbar />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">

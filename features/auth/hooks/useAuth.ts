@@ -3,8 +3,7 @@
 import { useWorkspace } from "@/context/WorkspaceContext";
 
 export function useAuth() {
-  const { currentUser, activeRole, login, logout, switchPersona } =
-    useWorkspace();
+  const { currentUser, activeRole, login, logout, switchUser } = useWorkspace();
 
   return {
     currentUser,
@@ -12,6 +11,6 @@ export function useAuth() {
     isAuthenticated: currentUser !== null,
     login,
     logout,
-    switchPersona,
+    switchUser,
   };
 }
